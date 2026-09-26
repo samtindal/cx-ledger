@@ -1,7 +1,6 @@
 import { useState, type DragEvent } from 'react';
 import type { SheetGrid } from '../../types';
 import { parseCsv } from '../../etl/parseCsv';
-import { readWorkbook } from '../../etl/readWorkbook';
 
 export interface ImportSource { source: string; origin: 'csv' | 'xlsx'; sheets: SheetGrid[] }
 
@@ -29,6 +28,7 @@ export function SourcePanel({ onSource }: { onSource(src: ImportSource): void })
       if (name.endsWith('.csv')) {
         submit({ source: file.name, origin: 'csv', sheets: [{ sheetName: 'CSV', rows: parseCsv(await file.text()) }] });
       } else if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
+        const { readWorkbook } = await import('../../etl/readWorkbook');
         submit({ source: file.name, origin: 'xlsx', sheets: readWorkbook(await file.arrayBuffer()) });
       } else {
         setMessage(`${file.name} isn't a CSV or Excel file.`);

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { PROJECT } from './data/project';
 import { useHashTab } from './lib/route';
 import { Banner } from './components/Banner';
+import { About } from './components/About';
 import { Chip } from './components/Chip';
 import { Tabs } from './components/Tabs';
 import { Overview } from './views/Overview';
@@ -33,12 +34,7 @@ export default function App() {
       </header>
       <Banner onAbout={() => setAboutOpen(true)} />
       <Tabs active={tab} />
-      {aboutOpen && (
-        <section aria-label="About">
-          <p>Inspired by commissioning data work I supported at an engineering firm&apos;s commissioning group in 2016.</p>
-          <button type="button" onClick={() => setAboutOpen(false)}>Close</button>
-        </section>
-      )}
+      {aboutOpen && <About onClose={() => setAboutOpen(false)} />}
       <main>
         <ActiveView />
       </main>
