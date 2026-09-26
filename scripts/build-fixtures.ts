@@ -51,6 +51,17 @@ function buildSamplePdfs() {
   writeFileSync('public/samples/ATS-1_Submittal_Cover.pdf', makePdf(['SUBMITTAL COVER SHEET - ATS-1', 'Automatic transfer switch, 400A, 480V', 'Manufacturer: ASCO   Model: 7000 Series', 'Status: Approved as noted', 'Sample document for the Cx Ledger demo.']));
 }
 
+function buildAhuSchedulePdf() {
+  const { rows } = JSON.parse(readFileSync('fixtures/ahu-schedule.extract.json', 'utf8')) as { rows: Record<string, string | undefined>[] };
+  const line = (r: Record<string, string | undefined>) =>
+    ['tag', 'desc', 'location', 'mfr', 'model', 'serial'].map((k) => r[k] ?? '').join(' | ');
+  const pdf = makePdf(['AHU SCHEDULE', 'TAG | DESCRIPTION | LOCATION | MFR | MODEL | SERIAL', ...rows.map(line)]);
+  mkdirSync('public/samples', { recursive: true });
+  writeFileSync('fixtures/ahu-schedule.pdf', pdf);
+  writeFileSync('public/samples/ahu-schedule.pdf', pdf);
+}
+
 buildContractorSchedule();
 buildSamplePdfs();
+buildAhuSchedulePdf();
 console.log('fixtures written');

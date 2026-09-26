@@ -1,0 +1,9 @@
+{
+  "rows": [
+    { "tag": "AHU-4", "desc": "Air handling unit - lab wing supply", "location": "Mech Rm 201", "mfr": "Trane", "model": "CSAA025", "serial": "", "sourcePage": 1, "confidence": "high" },
+    { "tag": "AHU-5", "desc": "Air handling unit - lab wing energy recovery", "location": "Mech Rm 201", "mfr": "Trane", "model": "CSAA030", "sourcePage": 1, "confidence": "medium" },
+    { "tag": "AHU-1", "desc": "Air handling unit, admin wing", "location": "Mech 101", "mfr": "Trane", "model": "CSAA021", "serial": "K22H4410", "sourcePage": 1, "confidence": "high" },
+    { "tag": "AHU-2", "desc": "Air handling unit, laboratory 100% OA", "location": "Mech 101", "mfr": "Trane", "model": "CSAA030", "serial": "K22H4415", "sourcePage": 2, "confidence": "low" },
+    { "tag": "ahu6", "desc": "Air handling unit - future lab fit-out", "location": "", "sourcePage": 2, "confidence": "low" }
+  ]
+}

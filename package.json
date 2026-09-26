@@ -13,6 +13,7 @@
     "fixtures": "tsx scripts/build-fixtures.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "0.127.0",
     "idb-keyval": "^6.3.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -25,6 +26,7 @@
     "@types/node": "^20.19.43",
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
+    "@vercel/node": "13.0.1",
     "@vitejs/plugin-react": "^4.7.0",
     "fake-indexeddb": "^6.2.5",
     "jsdom": "^25.0.1",

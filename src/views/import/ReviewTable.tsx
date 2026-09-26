@@ -55,7 +55,14 @@ export function ReviewTable({ batch, readOnly = false, onApprove }: {
             {rows.map((r) => (
               <tr key={r.rowNum}>
                 <td className="num">{r.rowNum}</td>
-                <td className="mono">{r.sourceTag}</td>
+                <td className="mono">
+                  {r.sourceTag}
+                  {r.ai && (
+                    <div className="review-ai">
+                      <Chip tone="accent">AI</Chip> p. {r.ai.sourcePage} · {r.ai.confidence} confidence
+                    </div>
+                  )}
+                </td>
                 <td>{r.tag && <Nameplate tag={r.tag} />}</td>
                 <td>{r.values.desc ?? ''}</td>
                 <td>{r.type}</td>

@@ -1,17 +1,27 @@
 import { useState, type DragEvent } from 'react';
 import type { SheetGrid } from '../../types';
 import { parseCsv } from '../../etl/parseCsv';
+import { isExtractionResponse, startAiSession, type ExtractionResponse } from '../../etl/aiExtract';
+import { useLedger } from '../../state/store';
+import cachedSample from '../../../fixtures/ahu-schedule.extract.json';
 
 export interface ImportSource { source: string; origin: 'csv' | 'xlsx'; sheets: SheetGrid[] }
 
 const MAX_BYTES = 25 * 1024 * 1024;
+const MAX_PDF_BYTES = 5 * 1024 * 1024;
 const PDF_MESSAGE = 'PDFs go to Documents (attach) — or use Extract from PDF.';
+const EXTRACT_OFF = 'Live extraction is off in this demo — try the sample.';
+// Bundled at build time: the sample never calls /api/extract.
+const SAMPLE = cachedSample as ExtractionResponse;
 
 const hasRows = (sheets: SheetGrid[]) => sheets.some((s) => s.rows.length > 0);
 
 export function SourcePanel({ onSource }: { onSource(src: ImportSource): void }) {
+  const { commit } = useLedger();
   const [text, setText] = useState('');
   const [message, setMessage] = useState<string | null>(null);
+  const [extractError, setExtractError] = useState<string | null>(null);
+  const [extracting, setExtracting] = useState(false);
   const [dragging, setDragging] = useState(false);
 
   function submit(src: ImportSource) {
@@ -35,6 +45,35 @@ export function SourcePanel({ onSource }: { onSource(src: ImportSource): void })
       }
     } catch {
       setMessage(`Couldn't read ${file.name}.`);
+    }
+  }
+
+  function stageAi(resp: ExtractionResponse, source: string) {
+    setMessage(null);
+    setExtractError(null);
+    commit((s) => startAiSession(s, resp, source));
+  }
+
+  async function extractPdf(file: File) {
+    setMessage(null);
+    setExtractError(null);
+    if (file.size > MAX_PDF_BYTES) { setExtractError(`${file.name} is larger than 5 MB.`); return; }
+    setExtracting(true);
+    try {
+      const res = await fetch('/api/extract', { method: 'POST', headers: { 'Content-Type': 'application/pdf' }, body: file });
+      const body: unknown = await res.json().catch(() => null);
+      if (res.status === 503) { setExtractError(EXTRACT_OFF); return; }
+      if (!res.ok) {
+        const error = (body as { error?: unknown } | null)?.error;
+        setExtractError(typeof error === 'string' ? error : `Extraction failed (${res.status}).`);
+        return;
+      }
+      if (!isExtractionResponse(body)) { setExtractError(`Couldn't read equipment rows from ${file.name}.`); return; }
+      stageAi(body, file.name);
+    } catch {
+      setExtractError('Extraction failed. Check your connection and try again.');
+    } finally {
+      setExtracting(false);
     }
   }
 
@@ -82,7 +121,29 @@ export function SourcePanel({ onSource }: { onSource(src: ImportSource): void })
           Run import
         </button>
       </div>
+      <div className="toolbar" role="group" aria-label="Extract from PDF">
+        <label>
+          Extract from PDF{' '}
+          <input
+            type="file"
+            aria-label="Extract from PDF"
+            accept=".pdf,application/pdf"
+            disabled={extracting}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = '';
+              if (file) void extractPdf(file);
+            }}
+          />
+        </label>
+        <button type="button" disabled={extracting} onClick={() => stageAi(SAMPLE, 'ahu-schedule.pdf (cached sample)')}>
+          Try the sample
+        </button>
+        <a href="/samples/ahu-schedule.pdf" target="_blank" rel="noreferrer">View sample PDF</a>
+        {extracting && <span role="status">Extracting…</span>}
+      </div>
       {message && <p className="import-message" role="status">{message}</p>}
+      {extractError && <div className="import-alert" role="alert"><p>{extractError}</p></div>}
     </section>
   );
 }

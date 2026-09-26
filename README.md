@@ -36,6 +36,18 @@ the Equipment drawer, goes through `applyChange()`, which appends an immutable `
 (who, when, what changed, before/after). This is what makes rollback and per-record history
 possible, and it's the only path allowed to touch equipment, issues, or documents.
 
+## Stretch: AI extraction from PDFs
+
+**Extract from PDF** sends an equipment schedule or submittal (≤ 5 MB, ≤ 10 pages) to a Vercel
+function (`api/extract.ts`) that asks Claude to fill in a fixed tool schema. The model proposes
+rows; the pipeline decides: the response goes through the same transform, validation, and review
+as a spreadsheet import. Rows carry an **AI** chip, their source page, and a confidence; low-confidence
+rows are staged unapproved, and nothing loads without review. **Try the sample** uses a cached
+response bundled with the app, so it never calls the API. The live endpoint is off unless
+`EXTRACT_ENABLED=true`, `ANTHROPIC_API_KEY`, and `ANTHROPIC_MODEL` are set as Vercel environment
+variables (see `.env.example`); the key never reaches the browser. It's rate-limited to 5 requests
+per hour per IP, held in memory, so the limit is per serverless instance, not global.
+
 ## Stack
 
 React 18 + TypeScript (strict) + Vite, tested with Vitest and Testing Library. State persists to
@@ -49,7 +61,7 @@ those are hand-rolled to keep the dependency list short and auditable.
 npm i
 npm run dev       # start the dev server
 npm test          # run the test suite
-npm run fixtures  # regenerate the Excel test fixtures
+npm run fixtures  # regenerate the Excel and PDF test fixtures
 ```
 
 ## Commercial tools
