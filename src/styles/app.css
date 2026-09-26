@@ -90,6 +90,31 @@ h1, h2, h3, .stat-num {
   margin-bottom: 12px;
 }
 
+.segment {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.segment button {
+  border: none;
+  border-right: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  padding: 4px 12px;
+}
+
+.segment button:last-child {
+  border-right: none;
+}
+
+.segment button[aria-pressed='true'] {
+  background: var(--surface-2);
+  font-weight: 600;
+  text-decoration: underline;
+}
+
 .preset-bar {
   background: color-mix(in srgb, var(--accent) 10%, transparent);
   border: 1px solid var(--line);
