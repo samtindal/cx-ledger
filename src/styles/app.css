@@ -1,0 +1,83 @@
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  margin: 0;
+}
+
+h1, h2, h3, .stat-num {
+  font-family: var(--font-head);
+  font-weight: 600;
+}
+
+.mono, td.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.nameplate {
+  background: var(--plate-bg);
+  color: var(--plate-ink);
+  font-family: var(--font-mono);
+  border-radius: 3px;
+  padding: 1px 6px;
+  letter-spacing: .04em;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .08), inset 0 -1px 0 rgb(0 0 0 / .5);
+  white-space: nowrap;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  padding: 2px 8px;
+  border: 1px solid transparent;
+}
+
+.chip--ok {
+  background: color-mix(in srgb, var(--ok) 18%, transparent);
+  color: var(--ok);
+  border-radius: 999px;
+}
+
+.chip--bad {
+  border-radius: 2px;
+  border: 1.5px solid var(--bad);
+  color: var(--bad);
+}
+
+.chip--warn {
+  border-radius: 999px;
+  border-style: dashed;
+  border-color: var(--warn);
+  color: var(--warn);
+}
+
+.chip--idle {
+  border-radius: 999px;
+  border: 1px solid var(--idle);
+  color: var(--idle);
+}
+
+.chip--accent {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+  border-radius: 999px;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.banner {
+  background: var(--surface-2);
+  color: var(--ink-2);
+  border-bottom: 1px solid var(--line);
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
