@@ -9,6 +9,7 @@ import { Equipment } from './views/Equipment';
 import { Issues } from './views/Issues';
 import { Documents } from './views/Documents';
 import { Import } from './views/Import';
+import { EquipmentDrawer } from './views/EquipmentDrawer';
 
 const VIEWS = {
   overview: Overview,
@@ -41,6 +42,7 @@ export default function App() {
       <main>
         <ActiveView />
       </main>
+      <EquipmentDrawer />
     </>
   );
 }

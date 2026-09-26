@@ -121,3 +121,56 @@ tbody tr {
 tbody tr:hover {
   background: var(--surface-2);
 }
+
+.drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(480px, 100%);
+  overflow-y: auto;
+  background: var(--surface);
+  border-left: 1px solid var(--line);
+  box-shadow: -4px 0 16px rgb(0 0 0 / .2);
+  padding: 16px;
+  z-index: 10;
+}
+
+.drawer__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.drawer__header h2 {
+  flex: 1;
+  margin: 0;
+}
+
+.drawer__nameplate {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 8px;
+  margin: 0 0 16px;
+}
+
+.drawer__nameplate dt {
+  color: var(--ink-2);
+}
+
+.drawer__nameplate dd {
+  margin: 0;
+}
+
+.drawer__checklist-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+@media (max-width: 600px) {
+  .drawer {
+    width: 100%;
+  }
+}
