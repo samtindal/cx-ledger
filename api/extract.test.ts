@@ -4,10 +4,13 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { loadFixtureBytes } from '../src/etl/__tests__/fixtures';
 
 const create = vi.hoisted(() => vi.fn());
-vi.mock('@anthropic-ai/sdk', () => ({
-  default: vi.fn(function Anthropic() { return { messages: { create } }; }),
-}));
+vi.mock('@anthropic-ai/sdk', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@anthropic-ai/sdk')>();
+  const Anthropic = vi.fn(function Anthropic() { return { messages: { create } }; });
+  return { ...actual, default: Object.assign(Anthropic, { BadRequestError: actual.BadRequestError }) };
+});
 
+import { BadRequestError } from '@anthropic-ai/sdk';
 import handler, { countPdfPages } from './extract';
 
 const pdf = Buffer.from(loadFixtureBytes('ahu-schedule.pdf'));
@@ -85,5 +88,19 @@ describe('POST /api/extract', () => {
     const [doc, text] = params.messages[0].content;
     expect(doc).toEqual({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: pdf.toString('base64') } });
     expect(text.type).toBe('text');
+  });
+
+  it('returns 502 naming the model setting when the API rejects forced tool use', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    create.mockRejectedValue(new BadRequestError(400,
+      { type: 'error', error: { type: 'invalid_request_error', message: 'tool_choice: type "tool" and "any" are not supported for this model.' } },
+      'tool_choice: type "tool" and "any" are not supported for this model.', new Headers()));
+    const out = await call(mockReq(pdf, '203.0.113.6'));
+    expect(out).toEqual({
+      statusCode: 502,
+      body: { error: 'The configured ANTHROPIC_MODEL rejected forced tool use; choose a model that supports tool_choice (see README).' },
+    });
+    expect(JSON.stringify(errorSpy.mock.calls)).not.toContain('test-key');
+    errorSpy.mockRestore();
   });
 });

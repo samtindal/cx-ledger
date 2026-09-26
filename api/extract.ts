@@ -12,6 +12,7 @@ const MAX_PAGES = 10;
 const RATE_LIMIT = 5;
 const RATE_WINDOW_MS = 60 * 60 * 1000;
 const TOOL_NAME = 'record_equipment_rows';
+const MODEL_REJECTED = 'The configured ANTHROPIC_MODEL rejected forced tool use; choose a model that supports tool_choice (see README).';
 
 const PROMPT = 'Extract every equipment row from this schedule or submittal. Copy values exactly as printed. ' +
   'Leave a field empty rather than guess. Skip rows that are not equipment. ' +
@@ -124,6 +125,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     return res.status(200).json({ rows: call.input.rows });
   } catch (err) {
+    // A 400 here is almost always the model refusing forced tool_choice (see README / .env.example).
+    if (err instanceof Anthropic.BadRequestError) {
+      console.error('extract: model rejected the request', { status: err.status });
+      return res.status(502).json({ error: MODEL_REJECTED });
+    }
     // Log only the status/type, never the request (it carries the PDF) or the key.
     const status = err instanceof Error && 'status' in err ? (err as { status?: unknown }).status : undefined;
     console.error('extract: API call failed', { status, name: err instanceof Error ? err.name : typeof err });

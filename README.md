@@ -48,6 +48,11 @@ response bundled with the app, so it never calls the API. The live endpoint is o
 variables (see `.env.example`); the key never reaches the browser. It's rate-limited to 5 requests
 per hour per IP, held in memory, so the limit is per serverless instance, not global.
 
+The function forces the model to call its extraction tool (`tool_choice`), so `ANTHROPIC_MODEL`
+must be a model that supports forced tool use, such as `claude-opus-5` or `claude-sonnet-5`.
+`claude-opus-5-5`, `claude-fable-5-1`, and `claude-mythos-5-1` reject it; with one of those set,
+every extraction returns a 502 that names the model setting.
+
 ## Stack
 
 React 18 + TypeScript (strict) + Vite, tested with Vitest and Testing Library. State persists to
