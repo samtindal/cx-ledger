@@ -3,7 +3,8 @@ import type { DocKind, DocumentRef } from '../types';
 import { DOC_KINDS } from '../types';
 import { useLedger } from '../state/store';
 import { planIntake, attachDocument, assignDocument, setDocumentKind, removeDocument, nextDocId, type AttachDocumentInput, type IntakePlan } from '../docs/intake';
-import { putBlob, deleteBlob, getDocumentBlob, storageUsed } from '../docs/store';
+import { putBlob, deleteBlob, storageUsed } from '../docs/store';
+import { openDocument } from '../docs/open';
 import { DropZone } from '../components/DropZone';
 import { Nameplate } from '../components/Nameplate';
 
@@ -19,13 +20,6 @@ function statusLabel(plan: IntakePlan): string {
   if (plan.status === 'linked') return `Linked to ${plan.tags[0]}`;
   if (plan.status === 'ambiguous') return `Ambiguous — ${plan.tags.join(', ')}`;
   return 'Unassigned — no matching tag';
-}
-
-async function openDocument(doc: DocumentRef) {
-  const blob = await getDocumentBlob(doc);
-  if (!blob) return;
-  const url = URL.createObjectURL(blob);
-  window.open(url, '_blank');
 }
 
 function TagSelect({

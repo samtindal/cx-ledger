@@ -13,14 +13,8 @@ import { Nameplate } from '../components/Nameplate';
 import { DropZone } from '../components/DropZone';
 import { attachDocument, assignDocument, removeDocument, nextDocId, type AttachDocumentInput } from '../docs/intake';
 import { detectKind } from '../docs/matchFilename';
-import { putBlob, deleteBlob, getDocumentBlob } from '../docs/store';
-
-async function openDocument(doc: DocumentRef) {
-  const blob = await getDocumentBlob(doc);
-  if (!blob) return;
-  const url = URL.createObjectURL(blob);
-  window.open(url, '_blank');
-}
+import { putBlob, deleteBlob } from '../docs/store';
+import { openDocument } from '../docs/open';
 
 export function EquipmentDrawer() {
   const { openTag, setOpenTag, setHighlightBatch } = useUi();
