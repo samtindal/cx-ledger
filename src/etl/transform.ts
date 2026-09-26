@@ -35,10 +35,16 @@ export function transformRows(grid: string[][], headerRow: number, headers: stri
       if (v) values[f] = v;
     }
     const type = typeOf(tag);
-    const sysRaw = cleanText(raw('system')).toLowerCase();
-    const fromColumn = SYSTEMS.find((s) => s.toLowerCase() === sysRaw);
+    const sysCell = raw('system');
+    const sysText = cleanText(sysCell);
+    const fromColumn = SYSTEMS.find((s) => s.toLowerCase() === sysText.toLowerCase());
     const system = fromColumn ?? systemFor(type);
-    if (fromColumn) values.system = fromColumn;
+    if (fromColumn) {
+      values.system = fromColumn;
+      if (sysCell !== fromColumn) notes.push(`${LABEL.system} cleaned: "${sysCell}" → "${fromColumn}"`);
+    } else if (sysText) {
+      warnings.push(`Unknown system "${sysText}"; using ${system} from tag registry`);
+    }
     if (tag && !isKnownType(type) && !fromColumn) warnings.push(`Unknown prefix "${type}"; loads as Unassigned`);
     return { rowNum, sourceTag, tag, values, type, system, systemFromColumn: Boolean(fromColumn), notes, warnings, blank };
   });

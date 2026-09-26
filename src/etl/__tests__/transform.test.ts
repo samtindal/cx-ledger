@@ -19,6 +19,12 @@ describe('transformRows', () => {
     expect(rows[0].values.system).toBe('Electrical');
     expect(rows[1]).toMatchObject({ system: 'Hydronic', systemFromColumn: false });
     expect(rows[1].values.system).toBeUndefined();
+    expect(rows[0].notes).toEqual(['System cleaned: "electrical" → "Electrical"']);
+    expect(rows[0].warnings).toEqual([]);
+    expect(rows[1].notes).toEqual([]);
+    expect(rows[1].warnings).toEqual(['Unknown system "Mechanical"; using Hydronic from tag registry']);
+    const [exact] = transformRows([headers, ['P-7', 'Pump', 'Hydronic']], 0, headers, map);
+    expect(exact).toMatchObject({ system: 'Hydronic', systemFromColumn: true, notes: [], warnings: [] });
   });
   it('flags blanks and unknown prefixes', () => {
     const rows = transformRows([headers, ['', ' ', ''], ['ZZ-9', 'Spare', '']], 0, headers, map);
