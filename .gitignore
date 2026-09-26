@@ -1,0 +1,18 @@
+# Build / deps
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Env / deploy
+.env
+.env.*
+!.env.example
+.vercel/
+
+# Agent scratch
+.superpowers/
+.worktrees/
+
+# OS
+.DS_Store
