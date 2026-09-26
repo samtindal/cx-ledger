@@ -1,4 +1,4 @@
-import type { AppState, Equipment, FptStatus, Issue, Severity, System, Trade } from '../types';
+import type { AppState, DocumentRef, Equipment, FptStatus, Issue, Severity, System, Trade } from '../types';
 import { checklistFor, SYSTEM_TEMPLATES } from './checklists';
 import { typeOf } from './tags';
 import { daysAgo } from '../lib/dates';
@@ -56,6 +56,12 @@ const ISSUES: SeedIssue[] = [
   ['CX-016', 'AHU-2', 'TAB report shows supply fan 12% below design CFM', 'Major', 'TAB', 31, null],
 ];
 
+export const SEED_DOCUMENTS: DocumentRef[] = [
+  { id: 'DOC-0001', tag: 'AHU-2', filename: 'AHU-2_TAB_Summary.pdf', kind: 'TAB report', mime: 'application/pdf', size: 824, addedAt: '2026-09-01T12:00:00.000Z', blobKey: 'seed:AHU-2_TAB_Summary.pdf', matchedBy: 'filename' },
+  { id: 'DOC-0002', tag: 'P-3', filename: 'P-3_FPT_Form.pdf', kind: 'FPT form', mime: 'application/pdf', size: 809, addedAt: '2026-09-01T12:00:00.000Z', blobKey: 'seed:P-3_FPT_Form.pdf', matchedBy: 'filename' },
+  { id: 'DOC-0003', tag: 'ATS-1', filename: 'ATS-1_Submittal_Cover.pdf', kind: 'Submittal', mime: 'application/pdf', size: 787, addedAt: '2026-09-01T12:00:00.000Z', blobKey: 'seed:ATS-1_Submittal_Cover.pdf', matchedBy: 'filename' },
+];
+
 export function seedPfc(type: string, system: System, pfcDone: number): boolean[] {
   const len = checklistFor(type, system).length;
   const checked = pfcDone === SYSTEM_TEMPLATES[system].length ? len : Math.min(pfcDone, len - 1);
@@ -75,5 +81,5 @@ export function buildSeed(now: Date = new Date()): { equipment: Equipment[]; iss
 
 export function seedState(now: Date = new Date()): AppState {
   const { equipment, issues } = buildSeed(now);
-  return { version: 1, equipment, issues, documents: [], profiles: [], batches: [], changes: [] };
+  return { version: 1, equipment, issues, documents: SEED_DOCUMENTS, profiles: [], batches: [], changes: [] };
 }

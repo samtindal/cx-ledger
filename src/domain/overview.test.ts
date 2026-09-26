@@ -17,9 +17,9 @@ describe('overview selectors (hand count from seed)', () => {
   });
   it('readiness by system', () => {
     expect(readinessBySystem(s)).toEqual([
-      { system: 'Air side', units: 11, pfcChecked: 59, pfcTotal: 68, pfcPct: 87, fptPassed: 3, openIssues: 7, docs: 0 },
-      { system: 'Hydronic', units: 8, pfcChecked: 42, pfcTotal: 48, pfcPct: 88, fptPassed: 3, openIssues: 2, docs: 0 },
-      { system: 'Electrical', units: 5, pfcChecked: 28, pfcTotal: 29, pfcPct: 97, fptPassed: 3, openIssues: 2, docs: 0 },
+      { system: 'Air side', units: 11, pfcChecked: 59, pfcTotal: 68, pfcPct: 87, fptPassed: 3, openIssues: 7, docs: 1 },
+      { system: 'Hydronic', units: 8, pfcChecked: 42, pfcTotal: 48, pfcPct: 88, fptPassed: 3, openIssues: 2, docs: 1 },
+      { system: 'Electrical', units: 5, pfcChecked: 28, pfcTotal: 29, pfcPct: 97, fptPassed: 3, openIssues: 2, docs: 1 },
       { system: 'Controls', units: 2, pfcChecked: 9, pfcTotal: 10, pfcPct: 90, fptPassed: 1, openIssues: 1, docs: 0 },
       { system: 'Plumbing', units: 1, pfcChecked: 5, pfcTotal: 5, pfcPct: 100, fptPassed: 1, openIssues: 0, docs: 0 },
     ]);

@@ -13,7 +13,7 @@ describe('registerRows', () => {
     expect(registerRows(s, f({ state: 'ready' }))).toHaveLength(11);
     expect(registerRows(s, f({ state: 'pfcIncomplete' }))).toHaveLength(9);
     expect(registerRows(s, f({ state: 'hasOpenIssues' }))).toHaveLength(10);
-    expect(registerRows(s, f({ state: 'missingTab' }))).toHaveLength(19);
+    expect(registerRows(s, f({ state: 'missingTab' }))).toHaveLength(18);
   });
   it('filters by system, type, search, and preset tags', () => {
     expect(registerRows(s, f({ system: 'Controls' }))).toHaveLength(2);
@@ -24,7 +24,7 @@ describe('registerRows', () => {
   });
   it('computes row stats', () => {
     const ahu2 = registerRows(s, f()).find((r) => r.eq.tag === 'AHU-2')!;
-    expect(ahu2).toMatchObject({ pfcDone: 7, pfcTotal: 7, pfc: 'Complete', openIssues: 3, docs: 0, readiness: 'Blocked' });
+    expect(ahu2).toMatchObject({ pfcDone: 7, pfcTotal: 7, pfc: 'Complete', openIssues: 3, docs: 1, readiness: 'Blocked' });
   });
   it('exports CSV', () => {
     const csv = registerCsv(registerRows(s, f({ tags: ['AHU-1'] })));

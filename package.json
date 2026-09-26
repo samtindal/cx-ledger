@@ -13,6 +13,7 @@
     "fixtures": "tsx scripts/build-fixtures.ts"
   },
   "dependencies": {
+    "idb-keyval": "^6.3.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
@@ -25,6 +26,7 @@
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^4.7.0",
+    "fake-indexeddb": "^6.2.5",
     "jsdom": "^25.0.1",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
