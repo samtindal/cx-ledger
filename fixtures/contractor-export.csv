@@ -1,0 +1,13 @@
+Equip Tag,EQUIPMENT DESCRIPTION,Loc.,Mfr,Model #,Serial #
+ahu 3,Air Handling Unit - Lab Makeup Air,Mech Rm 102,Trane,CSAA012,
+AHU-3,Air handling unit  -  lab makeup air,Mech Rm 102,Trane,CSAA012,K23J8812
+ef-4, Fume hood exhaust fan ,Roof,Greenheck,VEKTOR-MH,23-118842
+P 5,Heating hot water pump - lab loop,Boiler Rm 103,Bell & Gossett,e-1510,
+VAV2-15,VAV terminal w/ reheat - Lab 215,Lab 215,Price,SDV5,
+,,,,,
+XFMR-T1,"Dry-type transformer, 75 kVA",Elec Rm 104,Square D,EE75T3H,
+AHU-1,Air handling unit - admin wing,Mech Rm 101,Trane,CSAA021,K22H4410-R
+gen1,,Yard,Caterpillar,C9,CAT00C9XK
+ZZ-9,Spare equipment placeholder,,,,
+CH-2,"Air-cooled chiller, 120 ton",Yard,Trane,ACR120,
+,Unit heater - chemical storage,Chem Storage 110,Modine,HDS,
