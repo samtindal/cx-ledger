@@ -82,32 +82,45 @@ function readBody(req: VercelRequest, limit: number): Promise<Buffer | null> {
 
 // A `/Type /Page` object, not a `/Type /Pages` tree node (a PDF name ends at a delimiter).
 const PAGE_OBJECT = /\/Type\s*\/Page(?=[\s()<>[\]{}/%]|$)/g;
-// An indirect object's dictionary up to its `stream` keyword (never crossing `endobj`).
-const STREAM_OBJECT = /\d+\s+\d+\s+obj\b((?:(?!endobj)[\s\S])*?)(?<!end)stream\r?\n/g;
+// A `stream` keyword (not `endstream`) and its end-of-line; the stream's data follows.
+const STREAM_START = /(?<!end)stream\r?\n/g;
+const MAX_DICT_CHARS = 1024;
+// Total inflated bytes per request, so a decompression bomb can't exhaust the function's memory.
+const MAX_INFLATED_BYTES = 32 * 1024 * 1024;
 
 /**
  * Counts page objects, both in plain file text and inside Flate-compressed object streams
- * (`/Type /ObjStm`), where PDF 1.5+ writers usually put them. Returns 0 if none are found.
+ * (`/Type /ObjStm`), where PDF 1.5+ writers usually put them. Returns 0 when none are found or
+ * the object streams inflate past MAX_INFLATED_BYTES, so the caller can fail closed.
+ * Each stream's dictionary is read from a bounded window before it, keeping the scan linear.
  */
 export function countPdfPages(bytes: Uint8Array): number {
   const buf = Buffer.from(bytes);
   const text = buf.toString('latin1');
   let count = (text.match(PAGE_OBJECT) ?? []).length;
-  STREAM_OBJECT.lastIndex = 0;
-  for (let m; (m = STREAM_OBJECT.exec(text)); ) {
-    const dict = m[1];
+  let budget = MAX_INFLATED_BYTES;
+  STREAM_START.lastIndex = 0;
+  for (let m; (m = STREAM_START.exec(text)); ) {
+    const before = text.slice(Math.max(0, m.index - MAX_DICT_CHARS), m.index);
+    const objAt = before.lastIndexOf('obj');
+    const dict = objAt < 0 ? before : before.slice(objAt + 3);
     const start = m.index + m[0].length;
     const direct = /\/Length\s+(\d+)(?![\d\s]*R)/.exec(dict);
     const byLength = direct ? start + Number(direct[1]) : -1;
     const end = byLength > start && byLength <= buf.length ? byLength : text.indexOf('endstream', start);
     if (end < 0) break;
-    STREAM_OBJECT.lastIndex = end; // don't scan the stream's binary data for objects
+    STREAM_START.lastIndex = end; // skip the stream's data
     if (!/\/Type\s*\/ObjStm\b/.test(dict) || !/\/FlateDecode\b/.test(dict)) continue;
+    if (budget <= 0) return 0;
+    let inflated: Buffer;
     try {
-      count += (inflateSync(buf.subarray(start, end)).toString('latin1').match(PAGE_OBJECT) ?? []).length;
-    } catch {
-      // Unreadable stream: contributes nothing; a total of 0 fails closed in the handler.
+      inflated = inflateSync(buf.subarray(start, end), { maxOutputLength: budget });
+    } catch (err) {
+      if ((err as { code?: string }).code === 'ERR_BUFFER_TOO_LARGE') return 0; // budget spent: unverifiable
+      continue; // unreadable stream: contributes nothing; a total of 0 fails closed in the handler
     }
+    budget -= inflated.length;
+    count += (inflated.toString('latin1').match(PAGE_OBJECT) ?? []).length;
   }
   return count;
 }

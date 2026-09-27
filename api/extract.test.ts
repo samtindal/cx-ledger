@@ -69,6 +69,16 @@ describe('countPdfPages', () => {
     expect(countPdfPages(bytes)).toBe(3);
     expect(countPdfPages(objStmPdf(12))).toBe(12);
   });
+  it('returns 0 (unverified) when object streams inflate past the budget', () => {
+    const bomb = deflateSync(Buffer.alloc(40 * 1024 * 1024));
+    const bytes = Buffer.concat([
+      Buffer.from('%PDF-1.5\n1 0 obj\n<< /Type /Page >>\nendobj\n', 'latin1'),
+      Buffer.from(`2 0 obj\n<< /Type /ObjStm /N 1 /First 4 /Filter /FlateDecode /Length ${bomb.length} >>\nstream\n`, 'latin1'),
+      bomb,
+      Buffer.from('\nendstream\nendobj\n', 'latin1'),
+    ]);
+    expect(countPdfPages(bytes)).toBe(0);
+  });
   it('returns 0 when no page objects can be found', () => {
     expect(countPdfPages(Buffer.from('%PDF-1.7\nnot really a pdf\n%%EOF\n'))).toBe(0);
   });
