@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Readable } from 'node:stream';
+import { deflateSync } from 'node:zlib';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { loadFixtureBytes } from '../src/etl/__tests__/fixtures';
 
@@ -37,9 +38,39 @@ async function call(req: VercelRequest) {
   return out;
 }
 
+/** A PDF 1.5-style file whose page objects live only in a Flate-compressed object stream. */
+function objStmPdf(pages: number): Buffer {
+  const kids = Array.from({ length: pages }, (_, i) => `${i + 3} 0 R`).join(' ');
+  const objs = [
+    `<< /Type /Pages /Kids [${kids}] /Count ${pages} >>`,
+    ...Array.from({ length: pages }, () => '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>'),
+  ];
+  let offset = 0;
+  const header: string[] = [];
+  const bodies: string[] = [];
+  objs.forEach((o, i) => { header.push(`${i + 2} ${offset}`); bodies.push(o); offset += o.length + 1; });
+  const head = header.join(' ') + '\n';
+  const packed = deflateSync(Buffer.from(head + bodies.join('\n'), 'latin1'));
+  return Buffer.concat([
+    Buffer.from('%PDF-1.5\n%\xe2\xe3\xcf\xd3\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n', 'latin1'),
+    Buffer.from(`${pages + 3} 0 obj\n<< /Type /ObjStm /N ${objs.length} /First ${head.length} /Filter /FlateDecode /Length ${packed.length} >>\nstream\n`, 'latin1'),
+    packed,
+    Buffer.from('\nendstream\nendobj\n%%EOF\n', 'latin1'),
+  ]);
+}
+
 describe('countPdfPages', () => {
   it('counts page objects, not the page tree', () => {
     expect(countPdfPages(loadFixtureBytes('ahu-schedule.pdf'))).toBe(1);
+  });
+  it('counts page objects inside Flate-compressed object streams', () => {
+    const bytes = objStmPdf(3);
+    expect(bytes.toString('latin1')).not.toMatch(/\/Type \/Page\b/);
+    expect(countPdfPages(bytes)).toBe(3);
+    expect(countPdfPages(objStmPdf(12))).toBe(12);
+  });
+  it('returns 0 when no page objects can be found', () => {
+    expect(countPdfPages(Buffer.from('%PDF-1.7\nnot really a pdf\n%%EOF\n'))).toBe(0);
   });
 });
 
@@ -63,6 +94,18 @@ describe('POST /api/extract', () => {
     const big = Buffer.concat([Buffer.from('%PDF-1.4\n'), Buffer.alloc(5 * 1024 * 1024)]);
     const out = await call(mockReq(big, '203.0.113.2'));
     expect(out.statusCode).toBe(413);
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it('returns 413 for a PDF whose 11 pages sit in a compressed object stream', async () => {
+    const out = await call(mockReq(objStmPdf(11), '203.0.113.7'));
+    expect(out).toEqual({ statusCode: 413, body: { error: 'PDF has more than 10 pages.' } });
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 when the page count cannot be verified', async () => {
+    const out = await call(mockReq(Buffer.from('%PDF-1.7\nnot really a pdf\n%%EOF\n'), '203.0.113.8'));
+    expect(out).toEqual({ statusCode: 400, body: { error: "Couldn't verify the PDF's page count" } });
     expect(create).not.toHaveBeenCalled();
   });
 

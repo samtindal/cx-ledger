@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { inflateSync } from 'node:zlib';
 // `.js` + a dependency-free module: Vercel compiles this function to native ESM, file by file.
 import { isExtractionResponse } from '../src/etl/extractionSchema.js';
 
@@ -78,9 +79,36 @@ function readBody(req: VercelRequest, limit: number): Promise<Buffer | null> {
   });
 }
 
-/** Counts `/Type /Page` objects (not `/Type /Pages` tree nodes). */
+// A `/Type /Page` object, not a `/Type /Pages` tree node (a PDF name ends at a delimiter).
+const PAGE_OBJECT = /\/Type\s*\/Page(?=[\s()<>[\]{}/%]|$)/g;
+// An indirect object's dictionary up to its `stream` keyword (never crossing `endobj`).
+const STREAM_OBJECT = /\d+\s+\d+\s+obj\b((?:(?!endobj)[\s\S])*?)(?<!end)stream\r?\n/g;
+
+/**
+ * Counts page objects, both in plain file text and inside Flate-compressed object streams
+ * (`/Type /ObjStm`), where PDF 1.5+ writers usually put them. Returns 0 if none are found.
+ */
 export function countPdfPages(bytes: Uint8Array): number {
-  return (Buffer.from(bytes).toString('latin1').match(/\/Type\s*\/Page(?!s)/g) ?? []).length;
+  const buf = Buffer.from(bytes);
+  const text = buf.toString('latin1');
+  let count = (text.match(PAGE_OBJECT) ?? []).length;
+  STREAM_OBJECT.lastIndex = 0;
+  for (let m; (m = STREAM_OBJECT.exec(text)); ) {
+    const dict = m[1];
+    const start = m.index + m[0].length;
+    const direct = /\/Length\s+(\d+)(?![\d\s]*R)/.exec(dict);
+    const byLength = direct ? start + Number(direct[1]) : -1;
+    const end = byLength > start && byLength <= buf.length ? byLength : text.indexOf('endstream', start);
+    if (end < 0) break;
+    STREAM_OBJECT.lastIndex = end; // don't scan the stream's binary data for objects
+    if (!/\/Type\s*\/ObjStm\b/.test(dict) || !/\/FlateDecode\b/.test(dict)) continue;
+    try {
+      count += (inflateSync(buf.subarray(start, end)).toString('latin1').match(PAGE_OBJECT) ?? []).length;
+    } catch {
+      // Unreadable stream: contributes nothing; a total of 0 fails closed in the handler.
+    }
+  }
+  return count;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -101,7 +129,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const body = await readBody(req, MAX_BYTES);
   if (!body) return res.status(413).json({ error: 'PDF is larger than 5 MB.' });
   if (body.subarray(0, 4).toString('latin1') !== '%PDF') return res.status(400).json({ error: "That file isn't a PDF." });
-  if (countPdfPages(body) > MAX_PAGES) return res.status(413).json({ error: 'PDF has more than 10 pages.' });
+  const pages = countPdfPages(body);
+  if (pages === 0) return res.status(400).json({ error: "Couldn't verify the PDF's page count" });
+  if (pages > MAX_PAGES) return res.status(413).json({ error: 'PDF has more than 10 pages.' });
 
   try {
     const client = new Anthropic({ apiKey });
