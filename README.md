@@ -38,15 +38,15 @@ possible, and it's the only path allowed to touch equipment, issues, or document
 
 ## Stretch: AI extraction from PDFs
 
-**Extract from PDF** sends an equipment schedule or submittal (≤ 5 MB, ≤ 10 pages) to a Vercel
-function (`api/extract.ts`) that asks Claude to fill in a fixed tool schema. The model proposes
-rows; the pipeline decides: the response goes through the same transform, validation, and review
-as a spreadsheet import. Rows carry an **AI** chip, their source page, and a confidence; low-confidence
-rows are staged unapproved, and nothing loads without review. **Try the sample** uses a cached
-response bundled with the app, so it never calls the API. The live endpoint is off unless
-`EXTRACT_ENABLED=true`, `ANTHROPIC_API_KEY`, and `ANTHROPIC_MODEL` are set as Vercel environment
-variables (see `.env.example`); the key never reaches the browser. It's rate-limited to 5 requests
-per hour per IP, held in memory, so the limit is per serverless instance, not global.
+**Extract from PDF** sends an equipment schedule or submittal (≤ 4 MB, under Vercel's 4.5 MB request
+limit; ≤ 10 pages) to a Vercel function (`api/extract.ts`) that asks Claude to fill in a fixed tool
+schema. The model proposes rows; the pipeline decides: the response goes through the same transform,
+validation, and review as a spreadsheet import. Rows carry an **AI** chip, their source page, and a
+confidence; low-confidence rows are staged unapproved, and nothing loads without review. **Try the
+sample** uses a cached response bundled with the app, so it never calls the API. The live endpoint
+is off unless `EXTRACT_ENABLED=true`, `ANTHROPIC_API_KEY`, and `ANTHROPIC_MODEL` are set as Vercel
+environment variables (see `.env.example`); the key never reaches the browser. It's rate-limited to
+5 requests per hour per IP, held in memory, so the limit is per serverless instance, not global.
 
 The function forces the model to call its extraction tool (`tool_choice`), so `ANTHROPIC_MODEL`
 must be a model that supports forced tool use, such as `claude-opus-5` or `claude-sonnet-5`.
@@ -55,10 +55,11 @@ every extraction returns a 502 that names the model setting.
 
 ## Stack
 
-React 18 + TypeScript (strict) + Vite, tested with Vitest and Testing Library. State persists to
-IndexedDB via `idb-keyval`. Spreadsheet reading uses SheetJS (`xlsx`, loaded lazily only when an
-Excel file is chosen). No router, UI kit, date library, CSV library, or fuzzy-match library —
-those are hand-rolled to keep the dependency list short and auditable.
+React 18 + TypeScript (strict) + Vite, tested with Vitest and Testing Library. App state persists to
+`localStorage`; only attached document files are stored in IndexedDB, via `idb-keyval`. Spreadsheet
+reading uses SheetJS (`xlsx`, loaded lazily only when an Excel file is chosen). No router, UI kit,
+date library, CSV library, or fuzzy-match library — those are hand-rolled to keep the dependency
+list short and auditable.
 
 ## Running it
 

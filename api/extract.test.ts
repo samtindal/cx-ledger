@@ -90,10 +90,10 @@ describe('POST /api/extract', () => {
     expect(create).not.toHaveBeenCalled();
   });
 
-  it('returns 413 for a body over 5 MB', async () => {
-    const big = Buffer.concat([Buffer.from('%PDF-1.4\n'), Buffer.alloc(5 * 1024 * 1024)]);
+  it('returns 413 for a body over 4 MB (below Vercel\'s 4.5 MB request limit)', async () => {
+    const big = Buffer.concat([Buffer.from('%PDF-1.4\n'), Buffer.alloc(4 * 1024 * 1024)]);
     const out = await call(mockReq(big, '203.0.113.2'));
-    expect(out.statusCode).toBe(413);
+    expect(out).toEqual({ statusCode: 413, body: { error: 'PDF is larger than 4 MB.' } });
     expect(create).not.toHaveBeenCalled();
   });
 

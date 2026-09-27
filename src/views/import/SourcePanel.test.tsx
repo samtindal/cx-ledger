@@ -39,4 +39,14 @@ describe('AI extraction in the Import view', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('PDF has more than 10 pages.');
     expect(getState().batches).toHaveLength(0);
   });
+
+  it('rejects a PDF over 4 MB before uploading it', async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+    renderWithStore(<Import />);
+    const file = new File([new Uint8Array(4.5 * 1024 * 1024)], 'huge.pdf', { type: 'application/pdf' });
+    await userEvent.upload(screen.getByLabelText('Extract from PDF', { selector: 'input' }), file);
+    expect(await screen.findByRole('alert')).toHaveTextContent('huge.pdf is larger than 4 MB.');
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
 });

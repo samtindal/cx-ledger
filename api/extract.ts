@@ -8,7 +8,8 @@ import { isExtractionResponse } from '../src/etl/extractionSchema.js';
 // the runtime's helpers have already buffered and replayed the body.
 export const config = { api: { bodyParser: false } };
 
-const MAX_BYTES = 5 * 1024 * 1024;
+// Below Vercel's 4.5 MB request-body limit, so oversize uploads get this JSON 413, not the platform's error.
+const MAX_BYTES = 4 * 1024 * 1024;
 const MAX_PAGES = 10;
 const RATE_LIMIT = 5;
 const RATE_WINDOW_MS = 60 * 60 * 1000;
@@ -125,9 +126,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const declared = Number(req.headers['content-length']);
-  if (declared > MAX_BYTES) return res.status(413).json({ error: 'PDF is larger than 5 MB.' });
+  if (declared > MAX_BYTES) return res.status(413).json({ error: 'PDF is larger than 4 MB.' });
   const body = await readBody(req, MAX_BYTES);
-  if (!body) return res.status(413).json({ error: 'PDF is larger than 5 MB.' });
+  if (!body) return res.status(413).json({ error: 'PDF is larger than 4 MB.' });
   if (body.subarray(0, 4).toString('latin1') !== '%PDF') return res.status(400).json({ error: "That file isn't a PDF." });
   const pages = countPdfPages(body);
   if (pages === 0) return res.status(400).json({ error: "Couldn't verify the PDF's page count" });

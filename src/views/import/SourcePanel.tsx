@@ -8,7 +8,7 @@ import cachedSample from '../../../fixtures/ahu-schedule.extract.json';
 export interface ImportSource { source: string; origin: 'csv' | 'xlsx'; sheets: SheetGrid[] }
 
 const MAX_BYTES = 25 * 1024 * 1024;
-const MAX_PDF_BYTES = 5 * 1024 * 1024;
+const MAX_PDF_BYTES = 4 * 1024 * 1024; // matches api/extract.ts (under Vercel's 4.5 MB body limit)
 const PDF_MESSAGE = 'PDFs go to Documents (attach) — or use Extract from PDF.';
 const EXTRACT_OFF = 'Live extraction is off in this demo — try the sample.';
 // Bundled at build time: the sample never calls /api/extract.
@@ -57,7 +57,7 @@ export function SourcePanel({ onSource }: { onSource(src: ImportSource): void })
   async function extractPdf(file: File) {
     setMessage(null);
     setExtractError(null);
-    if (file.size > MAX_PDF_BYTES) { setExtractError(`${file.name} is larger than 5 MB.`); return; }
+    if (file.size > MAX_PDF_BYTES) { setExtractError(`${file.name} is larger than 4 MB.`); return; }
     setExtracting(true);
     try {
       const res = await fetch('/api/extract', { method: 'POST', headers: { 'Content-Type': 'application/pdf' }, body: file });
