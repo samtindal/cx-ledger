@@ -9,16 +9,37 @@ export function findRollbackConflicts(s: AppState, id: string): RollbackConflict
   if (own.length === 0) return [];
   const lastIdx = own[own.length - 1][1];
   const touched = new Set(own.map(([c]) => `${c.entity}:${c.key}`));
+  const createdUnits = new Set(own.filter(([c]) => c.entity === 'equipment' && c.op === 'create').map(([c]) => c.key));
   const rolledBack = new Set(s.batches.filter((b) => b.status === 'rolled back').map((b) => b.id));
-  const later = s.changes.slice(lastIdx + 1).filter((c) =>
-    c.batchId !== id && !(c.batchId && rolledBack.has(c.batchId)) && touched.has(`${c.entity}:${c.key}`));
-  const groups = new Map<string, ChangeRecord[]>();
-  for (const c of later) groups.set(c.key, [...(groups.get(c.key) ?? []), c]);
-  return [...groups].map(([key, recs]) => {
-    const fields = [...new Set(recs.map((r) => (r.op === 'update' ? FIELD_LABELS[r.field ?? ''] ?? r.field ?? '' : r.op === 'create' ? 'created' : 'deleted')))];
-    const count = recs.length;
+  // Group each blocking record under the unit it affects: a direct edit to a touched record,
+  // or an issue/document created on (or re-tagged to) a unit this batch created.
+  const groups = new Map<string, string[]>(); // unit key -> one label per blocking record
+  const add = (key: string, label: string) => groups.set(key, [...(groups.get(key) ?? []), label]);
+  for (const c of s.changes.slice(lastIdx + 1)) {
+    if (c.batchId === id || (c.batchId && rolledBack.has(c.batchId))) continue;
+    if (touched.has(`${c.entity}:${c.key}`)) {
+      add(c.key, c.op === 'update' ? FIELD_LABELS[c.field ?? ''] ?? c.field ?? '' : c.op === 'create' ? 'created' : 'deleted');
+      continue;
+    }
+    const tag = dependentTag(c);
+    if (tag !== undefined && createdUnits.has(tag)) add(tag, `${c.entity} ${c.key}`);
+  }
+  return [...groups].map(([key, labels]) => {
+    const fields = [...new Set(labels)];
+    const count = labels.length;
     return { key, fields, count, message: `${key} was edited after this import (${fields.join(', ')}, ${count} ${count === 1 ? 'change' : 'changes'}). Roll back those first or keep the batch.` };
   });
+}
+
+/** The unit tag an issue or document record points at, if it sets one. */
+function dependentTag(c: ChangeRecord): string | undefined {
+  if (c.entity === 'equipment') return undefined;
+  if (c.op === 'create') {
+    const tag = (c.after as { tag?: unknown } | undefined)?.tag;
+    return typeof tag === 'string' ? tag : undefined;
+  }
+  if (c.op === 'update' && c.field === 'tag' && typeof c.after === 'string') return c.after;
+  return undefined;
 }
 
 function inverse(r: ChangeRecord): Change {

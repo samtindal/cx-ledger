@@ -6,6 +6,7 @@ import { runPipeline, buildBatch } from '../stage';
 import { stageBatch, nextBatchId, loadBatch, approveAll, setApproval } from '../load';
 import { rollbackBatch, findRollbackConflicts } from '../rollback';
 import { applyChange } from '../../state/applyChange';
+import { attachDocument, assignDocument } from '../../docs/intake';
 import { loadFixtureText } from './fixtures';
 
 const NOW = new Date(2026, 8, 26, 12);
@@ -85,6 +86,28 @@ describe('rollback', () => {
     if (r.ok) return;
     expect(r.conflicts).toEqual([{ key: 'AHU-3', fields: ['checklist'], count: 2,
       message: 'AHU-3 was edited after this import (checklist, 2 changes). Roll back those first or keep the batch.' }]);
+  });
+  it('blocks when an issue was logged on a unit the import created', () => {
+    const [s1, id] = stage(seedState(NOW), CSV);
+    let { state } = loadBatch(s1, id);
+    state = applyChange(state, { entity: 'issue', op: 'create', value: { id: 'CX-017', tag: 'AHU-3', desc: 'No power', severity: 'Critical', trade: 'Electrical', opened: '2026-09-26', closed: null } }, { batchId: null });
+    const r = rollbackBatch(state, id);
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.conflicts.map((c) => c.message)).toEqual([
+      'AHU-3 was edited after this import (issue CX-017, 1 change). Roll back those first or keep the batch.',
+    ]);
+    expect(state.equipment.some((e) => e.tag === 'AHU-3')).toBe(true);
+  });
+  it('blocks when a document was attached or re-assigned to a unit the import created', () => {
+    const [s1, id] = stage(seedState(NOW), CSV);
+    let { state } = loadBatch(s1, id);
+    state = attachDocument(state, { id: 'DOC-0004', filename: 'x.pdf', kind: 'Other', mime: 'application/pdf', size: 1, tag: 'CH-2', matchedBy: 'manual', blobKey: 'k' });
+    state = assignDocument(state, 'DOC-0001', 'CH-2');
+    state = applyChange(state, { entity: 'equipment', op: 'update', key: 'CH-2', patch: { location: 'Roof' } }, { batchId: null });
+    expect(findRollbackConflicts(state, id).map((c) => c.message)).toEqual([
+      'CH-2 was edited after this import (document DOC-0004, document DOC-0001, location, 3 changes). Roll back those first or keep the batch.',
+    ]);
   });
   it('is LIFO across imports (Review Focus #4)', () => {
     const seed = seedState(NOW);
