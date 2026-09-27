@@ -60,6 +60,11 @@ export function attachDocument(s: AppState, p: AttachDocumentInput): AppState {
   return applyChange(s, { entity: 'document', op: 'create', value }, { batchId: null });
 }
 
+/** Attach several new documents, allocating each ID from the state being committed to. */
+export function attachNewDocuments(s: AppState, inputs: Omit<AttachDocumentInput, 'id'>[]): AppState {
+  return inputs.reduce((acc, p) => attachDocument(acc, { ...p, id: nextDocId(acc.documents) }), s);
+}
+
 export function assignDocument(s: AppState, id: string, tag: string | null): AppState {
   return applyChange(
     s,

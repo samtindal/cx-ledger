@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
-import { screen, within, act } from '@testing-library/react';
+import 'fake-indexeddb/auto';
+import { screen, within, act, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { EquipmentDrawer } from './EquipmentDrawer';
@@ -43,5 +44,20 @@ describe('EquipmentDrawer', () => {
     await screen.findByRole('dialog');
     await act(async () => { await userEvent.keyboard('{Escape}'); });
     expect(screen.queryByRole('dialog')).toBeNull();
+  });
+  it('ignores a second drop while attaching, with blob keys independent of IDs', async () => {
+    const { getState, container } = renderWithStore(<Open tag="EF-1" />);
+    const dialog = await screen.findByRole('dialog', { name: /EF-1/ });
+    const zone = within(dialog).getByRole('button', { name: 'Add documents for EF-1' }).closest('.drop-zone')!;
+    const files = [new File(['%PDF-1.4'], 'EF-1_Startup.pdf', { type: 'application/pdf' })];
+    fireEvent.drop(zone, { dataTransfer: { files } });
+    fireEvent.drop(zone, { dataTransfer: { files } });
+    await waitFor(() => expect(getState().documents).toHaveLength(4));
+    await act(() => new Promise((r) => setTimeout(r, 50)));
+    expect(container.innerHTML.length).toBeGreaterThan(0);
+    const docs = getState().documents;
+    expect(docs).toHaveLength(4);
+    expect(docs.at(-1)).toMatchObject({ id: 'DOC-0004', tag: 'EF-1', matchedBy: 'manual' });
+    expect(docs.at(-1)!.blobKey).not.toBe('DOC-0004');
   });
 });

@@ -11,9 +11,9 @@ import { today } from '../lib/dates';
 import { Chip } from '../components/Chip';
 import { Nameplate } from '../components/Nameplate';
 import { DropZone } from '../components/DropZone';
-import { attachDocument, assignDocument, removeDocument, nextDocId, type AttachDocumentInput } from '../docs/intake';
+import { attachNewDocuments, assignDocument, removeDocument, type AttachDocumentInput } from '../docs/intake';
 import { detectKind } from '../docs/matchFilename';
-import { putBlob, deleteBlob } from '../docs/store';
+import { putBlob, deleteBlob, newBlobKey } from '../docs/store';
 import { openDocument } from '../docs/open';
 
 export function EquipmentDrawer() {
@@ -24,6 +24,8 @@ export function EquipmentDrawer() {
   const [severity, setSeverity] = useState<Severity>(SEVERITIES[0]);
   const [trade, setTrade] = useState<Trade>(TRADES[0]);
   const [pendingRemove, setPendingRemove] = useState<string | null>(null);
+  const [attaching, setAttaching] = useState(false);
+  const attachingRef = useRef(false);
 
   const eq = openTag ? state.equipment.find((e) => e.tag === openTag) : undefined;
 
@@ -82,25 +84,30 @@ export function EquipmentDrawer() {
   }
 
   async function attachFiles(files: File[]) {
-    let docList = state.documents;
-    const attachments: AttachDocumentInput[] = [];
-    for (const file of files) {
-      const id = nextDocId(docList);
-      await putBlob(id, file);
-      const attach: AttachDocumentInput = {
-        id,
-        filename: file.name,
-        kind: detectKind(file.name),
-        mime: file.type,
-        size: file.size,
-        tag: eq!.tag,
-        matchedBy: 'manual',
-        blobKey: id,
-      };
-      attachments.push(attach);
-      docList = [...docList, { ...attach, addedAt: new Date().toISOString() }];
+    if (attachingRef.current) return;
+    attachingRef.current = true;
+    setAttaching(true);
+    try {
+      const tag = eq!.tag;
+      const attachments: Omit<AttachDocumentInput, 'id'>[] = [];
+      for (const file of files) {
+        const blobKey = newBlobKey();
+        await putBlob(blobKey, file);
+        attachments.push({
+          filename: file.name,
+          kind: detectKind(file.name),
+          mime: file.type,
+          size: file.size,
+          tag,
+          matchedBy: 'manual',
+          blobKey,
+        });
+      }
+      if (attachments.length) commit((s) => attachNewDocuments(s, attachments));
+    } finally {
+      attachingRef.current = false;
+      setAttaching(false);
     }
-    if (attachments.length) commit((s) => attachments.reduce((acc, a) => attachDocument(acc, a), s));
   }
 
   function reassignDoc(id: string, tag: string) {
@@ -232,7 +239,7 @@ export function EquipmentDrawer() {
             </li>
           ))}
         </ul>
-        <DropZone label={`Add documents for ${eq.tag}`} onFiles={(files) => void attachFiles(files)} multiple />
+        <DropZone label={`Add documents for ${eq.tag}`} onFiles={(files) => void attachFiles(files)} multiple disabled={attaching} />
       </section>
 
       <section aria-label="History">

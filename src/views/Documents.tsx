@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import type { DocKind, DocumentRef } from '../types';
 import { DOC_KINDS } from '../types';
 import { useLedger } from '../state/store';
-import { planIntake, attachDocument, assignDocument, setDocumentKind, removeDocument, nextDocId, type AttachDocumentInput, type IntakePlan } from '../docs/intake';
-import { putBlob, deleteBlob, storageUsed } from '../docs/store';
+import { planIntake, attachNewDocuments, assignDocument, setDocumentKind, removeDocument, type AttachDocumentInput, type IntakePlan } from '../docs/intake';
+import { putBlob, deleteBlob, newBlobKey, storageUsed } from '../docs/store';
 import { openDocument } from '../docs/open';
 import { DropZone } from '../components/DropZone';
 import { Nameplate } from '../components/Nameplate';
@@ -53,6 +53,8 @@ export function Documents() {
   const [preview, setPreview] = useState<{ file: File; plan: IntakePlan }[]>([]);
   const [groupBy, setGroupBy] = useState<GroupBy>('kind');
   const [pendingRemove, setPendingRemove] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
 
   const allTags = useMemo(
     () => Array.from(new Set(state.equipment.map((e) => e.tag))).sort(),
@@ -68,28 +70,32 @@ export function Documents() {
   }
 
   async function handleSave() {
-    const toSave = preview.filter((p) => p.plan.status !== 'too-large');
-    let docs = state.documents;
-    const attachments: AttachDocumentInput[] = [];
-    for (const { file, plan } of toSave) {
-      const id = nextDocId(docs);
-      await putBlob(id, file);
-      const attach: AttachDocumentInput = {
-        id,
-        filename: file.name,
-        kind: plan.kind,
-        mime: plan.mime,
-        size: plan.size,
-        tag: plan.status === 'linked' ? plan.tags[0] : null,
-        matchedBy: 'filename',
-        candidates: plan.status === 'ambiguous' ? plan.tags : undefined,
-        blobKey: id,
-      };
-      attachments.push(attach);
-      docs = [...docs, { ...attach, addedAt: new Date().toISOString() }];
+    if (savingRef.current) return;
+    savingRef.current = true;
+    setSaving(true);
+    try {
+      const toSave = preview.filter((p) => p.plan.status !== 'too-large');
+      const attachments: Omit<AttachDocumentInput, 'id'>[] = [];
+      for (const { file, plan } of toSave) {
+        const blobKey = newBlobKey();
+        await putBlob(blobKey, file);
+        attachments.push({
+          filename: file.name,
+          kind: plan.kind,
+          mime: plan.mime,
+          size: plan.size,
+          tag: plan.status === 'linked' ? plan.tags[0] : null,
+          matchedBy: 'filename',
+          candidates: plan.status === 'ambiguous' ? plan.tags : undefined,
+          blobKey,
+        });
+      }
+      commit((s) => attachNewDocuments(s, attachments));
+      setPreview([]);
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
     }
-    commit((s) => attachments.reduce((acc, a) => attachDocument(acc, a), s));
-    setPreview([]);
   }
 
   function assign(id: string, tag: string) {
@@ -126,7 +132,7 @@ export function Documents() {
 
       <p>{formatBytes(storageUsed(state.documents))} used</p>
 
-      <DropZone label="Add documents" onFiles={handleFiles} multiple />
+      <DropZone label="Add documents" onFiles={handleFiles} multiple disabled={saving} />
 
       {preview.length > 0 && (
         <div className="import-panel">
@@ -153,7 +159,7 @@ export function Documents() {
             </table>
           </div>
           <div className="toolbar">
-            <button type="button" className="primary" disabled={saveableCount === 0} onClick={() => void handleSave()}>
+            <button type="button" className="primary" disabled={saveableCount === 0 || saving} onClick={() => void handleSave()}>
               Save {saveableCount} files
             </button>
           </div>

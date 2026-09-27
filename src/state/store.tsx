@@ -4,16 +4,22 @@ import { applyChange, type Change } from './applyChange';
 import { clearSaved, loadState, saveState } from './persist';
 import { seedState } from '../data/seed';
 
-type Action =
+export type LedgerAction =
   | { type: 'change'; change: Change }
   | { type: 'commit'; fn: (s: AppState) => AppState }
   | { type: 'replace'; state: AppState };
 
-function reducer(state: AppState, action: Action): AppState {
-  switch (action.type) {
-    case 'change': return applyChange(state, action.change, { batchId: null });
-    case 'commit': return action.fn(state);
-    case 'replace': return action.state;
+export function ledgerReducer(state: AppState, action: LedgerAction): AppState {
+  try {
+    switch (action.type) {
+      case 'change': return applyChange(state, action.change, { batchId: null });
+      case 'commit': return action.fn(state);
+      case 'replace': return action.state;
+    }
+  } catch (err) {
+    // A rejected change must never take the app down: keep the prior state.
+    console.error('Change rejected:', err);
+    return state;
   }
 }
 
@@ -31,7 +37,7 @@ interface Ledger {
 const LedgerContext = createContext<Ledger | null>(null);
 
 export function LedgerProvider({ initial, children }: { initial?: AppState; children: ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, initial, (i) => i ?? loadState());
+  const [state, dispatch] = useReducer(ledgerReducer, initial, (i) => i ?? loadState());
   useEffect(() => { saveState(state); }, [state]);
   const change = useCallback((c: Change) => dispatch({ type: 'change', change: c }), []);
   const commit = useCallback((fn: (s: AppState) => AppState) => dispatch({ type: 'commit', fn }), []);

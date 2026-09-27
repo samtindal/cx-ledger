@@ -19,6 +19,9 @@ function readAsArrayBuffer(blob: Blob): Promise<ArrayBuffer> {
   });
 }
 
+/** IndexedDB key for a newly uploaded file; independent of the document's ID. */
+export const newBlobKey = () => crypto.randomUUID();
+
 export const putBlob = async (key: string, blob: Blob) => {
   const bytes = await readAsArrayBuffer(blob);
   await set(key, { type: blob.type, bytes }, store());
